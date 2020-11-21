@@ -1,0 +1,10 @@
+[package]
+name = "rehelmeting_squared"
+version = "0.1.0"
+authors = ["nonk123 <Sergeyii321@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+piston2d-graphics = "0.39.0"
+pistoncore-glutin_window = "0.67.0"
+piston2d-opengl_graphics = "0.76.0"
