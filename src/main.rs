@@ -1,26 +1,64 @@
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
 use piston::event_loop::{EventSettings, Events};
-use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
+use piston::input::{Button, Key, PressEvent, RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
 use piston::window::WindowSettings;
 
+mod dungeon;
+
+use dungeon::{Dungeon, Tile};
+
 struct Rehelmeting {
-    gl: GlGraphics,
+    dungeon: Dungeon,
+    /// `true` if a new dungeon is requested.
+    new_dungeon: bool,
 }
 
 impl Rehelmeting {
-    fn render(&mut self, args: &RenderArgs) {
-        self.gl.draw(args.viewport(), |ctx, gl| {
+    fn new() -> Self {
+        Self {
+            dungeon: Dungeon::new(),
+            new_dungeon: true,
+        }
+    }
+
+    fn render(&mut self, gl: &mut GlGraphics, args: &RenderArgs) {
+        gl.draw(args.viewport(), |ctx, gl| {
             use graphics::*;
 
-            let rect = rectangle::rectangle_by_corners(350.0, 250.0, 450.0, 350.0);
-
             clear([0.0, 0.0, 0.0, 1.0], gl);
-            rectangle([1.0, 0.0, 0.0, 1.0], rect, ctx.transform, gl);
+
+            let tile_size = 20f64;
+
+            for x in 0..dungeon::WIDTH {
+                for y in 0..dungeon::HEIGHT {
+                    match self.dungeon.tiles[y][x] {
+                        Tile::Empty => continue,
+                        _ => {}
+                    }
+
+                    let color = [0.3, 0.3, 0.3, 1.0];
+
+                    let x0 = x as f64 * tile_size;
+                    let y0 = y as f64 * tile_size;
+
+                    let x1 = x0 + tile_size;
+                    let y1 = y0 + tile_size;
+
+                    let rect = rectangle::rectangle_by_corners(x0, y0, x1, y1);
+
+                    rectangle(color, rect, ctx.transform, gl);
+                }
+            }
         });
     }
 
-    fn update(&mut self, _args: &UpdateArgs) {}
+    fn update(&mut self, _args: &UpdateArgs) {
+        if self.new_dungeon {
+            self.dungeon.generate();
+            self.new_dungeon = false;
+        }
+    }
 }
 
 fn main() {
@@ -32,19 +70,27 @@ fn main() {
         .build()
         .unwrap();
 
-    let mut game = Rehelmeting {
-        gl: GlGraphics::new(opengl),
-    };
+    let mut game = Rehelmeting::new();
 
     let mut events = Events::new(EventSettings::new());
 
+    let mut gl = GlGraphics::new(opengl);
+
     while let Some(e) = events.next(&mut window) {
+        if let Some(Button::Keyboard(key)) = e.press_args() {
+            match key {
+                Key::G => game.new_dungeon = true,
+                Key::Q => break,
+                _ => {}
+            }
+        }
+
         if let Some(args) = e.update_args() {
             game.update(&args);
         }
 
         if let Some(args) = e.render_args() {
-            game.render(&args);
+            game.render(&mut gl, &args);
         }
     }
 }
